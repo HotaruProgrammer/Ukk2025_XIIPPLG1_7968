@@ -16,6 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   bool? _isAdminCache;
 
+  // Check if the current user is an admin
   Future<bool> _isAdmin() async {
     if (_isAdminCache != null) return _isAdminCache!;
     if (user == null) return false;
@@ -31,6 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Add a new task to the Firestore
   void _addTask() async {
     String taskText = taskController.text.trim();
     if (taskText.isEmpty) {
@@ -47,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
         taskController.clear();
-        setState(() {}); // Refresh UI setelah menambahkan tugas
+        setState(() {});
       } catch (e) {
         _showSnackBar("Gagal menambahkan tugas: $e");
       }
@@ -56,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Take the task as a member
   void _takeTask(String taskId) async {
     try {
       await _firestore.collection('tasks').doc(taskId).update({
@@ -67,6 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // Mark the task as completed
   void _submitTask(String taskId) async {
     try {
       await _firestore.collection('tasks').doc(taskId).update({
@@ -77,12 +81,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _logout() async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pop(context); // Tutup drawer sebelum logout
-    if (mounted) Navigator.pushReplacementNamed(context, '/login');
+  // Show logout confirmation dialog
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Konfirmasi Logout"),
+        content: Text("Apakah Anda yakin ingin keluar?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text("Tidak"),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacementNamed(context, '/login');
+              } catch (e) {
+                _showSnackBar("Gagal logout: $e");
+              }
+            },
+            child: Text("Ya"),
+          ),
+        ],
+      ),
+    );
   }
 
+  // Show a SnackBar with a message
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -118,6 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
+          // Show Add Task section if the user is an admin
           FutureBuilder<bool>(
             future: _isAdmin(),
             builder: (context, snapshot) {
@@ -127,22 +157,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (snapshot.data == true) {
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: taskController,
-                          decoration: const InputDecoration(labelText: 'Tambah Tugas'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
                         ),
-                      ),
-                      IconButton(icon: Icon(Icons.add), onPressed: _addTask),
-                    ],
+                      ],
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: taskController,
+                            decoration: InputDecoration(
+                              labelText: 'Tambah Tugas',
+                              border: InputBorder.none,
+                              hintText: 'Masukkan tugas baru',
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add, color: Colors.blue),
+                          onPressed: _addTask,
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
               return SizedBox.shrink();
             },
           ),
+          // Display tasks in a list
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore.collection('tasks').orderBy('createdAt', descending: true).snapshots(),
@@ -167,9 +219,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     return Card(
                       margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      elevation: 2,
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: ListTile(
-                        title: Text(taskData['task'] ?? "Tugas tanpa nama"),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        title: Text(taskData['task'] ?? "Tugas tanpa nama", style: TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('Status: $taskStatus'),
                         trailing: widget.role == 'member'
                             ? (taskStatus == 'Belum Diambil'
