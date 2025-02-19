@@ -36,6 +36,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'username': username,
         'email': email,
         'role': 'member',
+        'photoURL': '',
+        "profileImageBase64": '',
+        'phone': '',
+        'Description': '',
+        'password': password,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

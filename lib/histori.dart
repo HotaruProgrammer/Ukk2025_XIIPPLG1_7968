@@ -26,13 +26,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Log the login activity
     _logUserActivity('login');
   }
 
   @override
   void dispose() {
-    // Log the logout activity when user exits the app
     _logUserActivity('logout');
     super.dispose();
   }
@@ -43,7 +41,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(title: Text('Histori Aktivitas dan Tugas Selesai')),
       body: ListView(
         children: [
-          // Tugas yang sudah selesai
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -90,7 +87,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
             },
           ),
           
-          // Aktivitas Login
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
