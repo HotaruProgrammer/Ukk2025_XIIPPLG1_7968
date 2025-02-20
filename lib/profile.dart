@@ -44,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateUserData(String field, String newValue) async {
     if (newValue.isEmpty || newValue == _userData![field]) return;
 
-    setState(() => _isLoading = true); // Hanya satu kali panggil setState sebelum update
+    setState(() => _isLoading = true);
 
     try {
       await _firestore.collection('users').doc(widget.user.uid).update({
@@ -63,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SnackBar(content: Text('Gagal memperbarui $field: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isLoading = false); // Pastikan setState dipanggil setelah update selesai
+      setState(() => _isLoading = false); 
     }
   }
 

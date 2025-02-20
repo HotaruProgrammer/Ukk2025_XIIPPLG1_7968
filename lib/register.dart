@@ -31,7 +31,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: password,
       );
 
-      // Simpan user ke Firestore dengan tambahan username
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'username': username,
         'email': email,
@@ -77,19 +76,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Menghindari masalah dengan keyboard
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Background Image
           Container(
             decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/register_background.jpg'), // Ganti dengan gambar latar belakang
-                fit: BoxFit.cover,
+              gradient: LinearGradient(
+                colors: [Colors.blueAccent, Colors.lightBlueAccent],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
           ),
-          // Konten utama
           Center(
             child: Padding(
               padding: EdgeInsets.all(20.0),
@@ -115,6 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: usernameController,
                         decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.person),
                           labelText: 'Username',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -127,6 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: emailController,
                         decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.email),
                           labelText: 'Email',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -139,6 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextField(
                         controller: passwordController,
                         decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.lock),
                           labelText: 'Password',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
