@@ -12,7 +12,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailOrUsernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  // final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _login() async {
@@ -25,49 +24,57 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      // Cek apakah input berupa email atau username
-      bool isEmail = emailOrUsername.contains('@');
-      String queryField = isEmail ? 'email' : 'username';
+      String email = emailOrUsername;
+      if (!emailOrUsername.contains('@')) {
+        try {
+          QuerySnapshot userSnapshot = await _firestore
+              .collection('users')
+              .where('username', isEqualTo: emailOrUsername)
+              .get();
 
-      QuerySnapshot userSnapshot = await _firestore
-          .collection('users')
-          .where(queryField, isEqualTo: emailOrUsername)
-          .get();
+          print("📄 Jumlah Dokumen Ditemukan: ${userSnapshot.docs.length}");
 
-      // Cek apakah user ditemukan
-      if (userSnapshot.docs.isEmpty) {
-        _showAlert('Pengguna belum terdaftar di sistem');
+          if (userSnapshot.docs.isEmpty) {
+            _showAlert('Username tidak ditemukan.');
+            return;
+          }
+
+          Map<String, dynamic>? userData = userSnapshot.docs.first.data() as Map<String, dynamic>?;
+
+          print("📊 Data Pengguna: $userData");
+
+          if (userData == null || !userData.containsKey('email') || userData['email'].isEmpty) {
+            _showAlert('Data pengguna tidak valid.');
+            return;
+          }
+
+          email = userData['email'];
+          print("📧 Email ditemukan: $email");
+        } catch (e) {
+          print("🔥 Firestore Query Error: $e");
+          _showAlert('Gagal mengambil data pengguna.');
+          return;
+        }
+      }
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showAlert('Pengguna belum login.');
         return;
       }
-
-      // Ambil data pengguna
-      Map<String, dynamic>? data = userSnapshot.docs.first.data() as Map<String, dynamic>?;
-
-      if (data == null) {
-        _showAlert('Data pengguna tidak ditemukan');
-        return;
-      }
-
-      // Cek password
-      if (data['password'] != password) {
-        _showAlert('Password salah');
-        return;
-      }
-
-      // Ambil peran pengguna
-      String role = data['role'] ?? 'member';
-
-      // Tampilkan pesan sukses
-      _showAlert('Login berhasil', success: true);
-
-      // Navigasi ke Dashboard
+      print("✅ Login berhasil untuk user: ${user.email}");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => DashboardScreen(role: role),
+          builder: (context) => DashboardScreen(role: 'member'),
         ),
       );
     } on FirebaseAuthException catch (e) {
+      print("⚠️ FirebaseAuth Error: ${e.code}, Message: ${e.message}");
       if (e.code == 'wrong-password') {
         _showAlert('Password salah. Silakan coba lagi.');
       } else if (e.code == 'user-not-found') {
@@ -75,13 +82,15 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'invalid-email') {
         _showAlert('Format email tidak valid.');
       } else {
-        _showAlert('Login gagal: ${e.message}');
+        _showAlert(e.message ?? 'Login gagal');
       }
     } catch (e) {
-      _showAlert('Terjadi kesalahan: ${e.toString()}');
+      print("🚨 Unexpected Error: $e");
+      _showAlert('Terjadi kesalahan. Coba lagi nanti.');
     }
   }
 
+  // Alert function
   void _showAlert(String message, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -181,6 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Widget untuk TextField
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

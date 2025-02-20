@@ -34,12 +34,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'username': username,
         'email': email,
+        'password': password,
         'role': 'member',
         'photoURL': '',
         "profileImageBase64": '',
         'phone': '',
         'Description': '',
-        'password': password,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

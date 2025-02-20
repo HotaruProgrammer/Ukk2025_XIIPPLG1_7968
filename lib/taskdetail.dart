@@ -13,9 +13,9 @@ class TaskDetailScreen extends StatefulWidget {
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  TextEditingController _taskController = TextEditingController();
-  TextEditingController _categoryController = TextEditingController();
-  TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _taskController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   String _status = 'ToDo';
 
   bool _isLoading = true;
@@ -41,36 +41,41 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _isLoading = false;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tugas tidak ditemukan!')),
-        );
+        _showSnackbar('Tugas tidak ditemukan!');
         Navigator.pop(context);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan: $e')),
-      );
+      _showSnackbar('Terjadi kesalahan: $e');
       Navigator.pop(context);
     }
   }
 
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _updateTask() async {
+    if (_taskController.text.trim().isEmpty ||
+        _categoryController.text.trim().isEmpty ||
+        _descriptionController.text.trim().isEmpty) {
+      _showSnackbar('Semua field harus diisi!');
+      return;
+    }
+
     try {
       await _firestore.collection('tasks').doc(widget.taskId).update({
-        'task': _taskController.text,
-        'category': _categoryController.text,
-        'description': _descriptionController.text,
+        'task': _taskController.text.trim(),
+        'category': _categoryController.text.trim(),
+        'description': _descriptionController.text.trim(),
         'status': _status,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tugas berhasil diperbarui!')),
-      );
+      _showSnackbar('Tugas berhasil diperbarui!');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memperbarui tugas: $e')),
-      );
+      _showSnackbar('Gagal memperbarui tugas: $e');
     }
   }
 
@@ -96,95 +101,146 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (confirm) {
       try {
         await _firestore.collection('tasks').doc(widget.taskId).delete();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tugas berhasil dihapus!')),
-        );
+        _showSnackbar('Tugas berhasil dihapus!');
         Navigator.pop(context);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menghapus tugas: $e')),
-        );
+        _showSnackbar('Gagal menghapus tugas: $e');
       }
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'ToDo':
+        return Colors.orange;
+      case 'InProgress':
+        return Colors.blue;
+      case 'Complete':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFF4F6F8),
       appBar: AppBar(
         title: Text('Detail Tugas'),
         actions: [
           IconButton(
-            icon: Icon(Icons.delete),
+            icon: Icon(Icons.delete, color: Colors.redAccent),
             onPressed: _deleteTask,
           ),
         ],
+        backgroundColor: Colors.blueAccent,
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _taskController,
-                      decoration: InputDecoration(
-                        labelText: 'Tugas',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: _categoryController,
-                      decoration: InputDecoration(
-                        labelText: 'Kategori',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: _descriptionController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: 'Deskripsi',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _status,
-                      decoration: InputDecoration(
-                        labelText: 'Status',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ['ToDo', 'In Progress', 'Complete']
-                          .map((status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _status = value!;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: _updateTask,
-                      icon: Icon(Icons.save),
-                      label: Text('Simpan Perubahan'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                child: Card(
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _taskController,
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            labelText: 'Judul Tugas',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                      ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: _categoryController,
+                          decoration: InputDecoration(
+                            labelText: 'Kategori',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+
+                        // Description
+                        TextField(
+                          controller: _descriptionController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText: 'Deskripsi',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(_status),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _status,
+                                decoration: InputDecoration(
+                                  labelText: 'Status',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: ['ToDo', 'InProgress', 'Complete']
+                                    .map((status) => DropdownMenuItem(
+                                          value: status,
+                                          child: Text(status),
+                                        ))
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _status = value!;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _updateTask,
+                              icon: Icon(Icons.save),
+                              label: Text('Simpan'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Kembali',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

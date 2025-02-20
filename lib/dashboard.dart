@@ -88,32 +88,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _confirmLogout() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Konfirmasi"),
-          content: const Text("Apakah yakin anda ingin keluar?"),
-          actions: [
-            TextButton(child: const Text("Tidak"), onPressed: () => Navigator.of(context).pop()),
-            ElevatedButton(
-              child: const Text("Ya"),
-              onPressed: () {
-                FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushReplacementNamed('/login');
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+void _confirmLogout() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Konfirmasi"),
+        content: const Text("Apakah yakin anda ingin keluar?"),
+        actions: [
+          TextButton(
+            child: const Text("Tidak"),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ElevatedButton(
+            child: const Text("Ya"),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.of(context).pushReplacementNamed('/login');
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
-    String todayDate = DateFormat('d MMMM').format(DateTime.now());
+    String todayDate = DateFormat('EEEE, d MMMM').format(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
