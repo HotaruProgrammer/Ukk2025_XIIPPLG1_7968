@@ -13,90 +13,94 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailOrUsernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = false;
 
-  void _login() async {
+  Future<void> _login() async {
+    setState(() => _isLoading = true);
+
     String emailOrUsername = emailOrUsernameController.text.trim();
     String password = passwordController.text.trim();
 
     if (emailOrUsername.isEmpty || password.isEmpty) {
       _showAlert('Harap isi semua bidang');
+      setState(() => _isLoading = false);
       return;
     }
 
     try {
       String email = emailOrUsername;
+
       if (!emailOrUsername.contains('@')) {
-        try {
-          QuerySnapshot userSnapshot = await _firestore
-              .collection('users')
-              .where('username', isEqualTo: emailOrUsername)
-              .get();
+        QuerySnapshot userSnapshot = await _firestore
+            .collection('users')
+            .where('username', isEqualTo: emailOrUsername)
+            .limit(1)
+            .get();
 
-          print("📄 Jumlah Dokumen Ditemukan: ${userSnapshot.docs.length}");
+        if (userSnapshot.docs.isEmpty) {
+          throw FirebaseAuthException(
+            code: 'user-not-found',
+            message: 'Username tidak ditemukan.',
+          );
+        }
 
-          if (userSnapshot.docs.isEmpty) {
-            _showAlert('Username tidak ditemukan.');
-            return;
-          }
+        var userData = userSnapshot.docs.first.data() as Map<String, dynamic>?;
+        email = userData?['email'] ?? '';
 
-          Map<String, dynamic>? userData = userSnapshot.docs.first.data() as Map<String, dynamic>?;
-
-          print("📊 Data Pengguna: $userData");
-
-          if (userData == null || !userData.containsKey('email') || userData['email'].isEmpty) {
-            _showAlert('Data pengguna tidak valid.');
-            return;
-          }
-
-          email = userData['email'];
-          print("📧 Email ditemukan: $email");
-        } catch (e) {
-          print("🔥 Firestore Query Error: $e");
-          _showAlert('Gagal mengambil data pengguna.');
-          return;
+        if (email.isEmpty) {
+          throw FirebaseAuthException(
+            code: 'invalid-credential',
+            message: 'Data pengguna tidak valid.',
+          );
         }
       }
+
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showAlert('Pengguna belum login.');
-        return;
-      }
-      print("✅ Login berhasil untuk user: ${user.email}");
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DashboardScreen(role: 'member'),
-        ),
-      );
+      print("✅ Login berhasil untuk user: $email");
+      _navigateToDashboard();
     } on FirebaseAuthException catch (e) {
-      print("⚠️ FirebaseAuth Error: ${e.code}, Message: ${e.message}");
-      if (e.code == 'wrong-password') {
-        _showAlert('Password salah. Silakan coba lagi.');
-      } else if (e.code == 'user-not-found') {
-        _showAlert('Pengguna tidak ditemukan.');
-      } else if (e.code == 'invalid-email') {
-        _showAlert('Format email tidak valid.');
-      } else {
-        _showAlert(e.message ?? 'Login gagal');
+      String errorMessage;
+      switch (e.code) {
+        case 'wrong-password':
+          errorMessage = 'Password salah. Silakan coba lagi.';
+          break;
+        case 'user-not-found':
+          errorMessage = 'Pengguna tidak ditemukan. Periksa email atau username.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Format email tidak valid.';
+          break;
+        case 'invalid-credential':
+          errorMessage = 'Email atau password salah.';
+          break;
+        default:
+          errorMessage = 'Terjadi kesalahan: ${e.message}';
       }
-    } catch (e) {
-      print("🚨 Unexpected Error: $e");
-      _showAlert('Terjadi kesalahan. Coba lagi nanti.');
+      _showAlert(errorMessage);
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  // Alert function
+  void _navigateToDashboard() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DashboardScreen(role: 'member'),
+      ),
+    );
+  }
+
   void _showAlert(String message, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: success ? Colors.green : Colors.red,
-        duration: Duration(seconds: 2),
+        duration: Duration(seconds: message.length > 50 ? 3 : 2),
       ),
     );
   }
@@ -152,20 +156,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: true,
                       ),
                       SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Login',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
+                      _isLoading
+                          ? CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                minimumSize: Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                'Login',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
                       SizedBox(height: 16),
                       TextButton(
                         onPressed: () {
@@ -190,7 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Widget untuk TextField
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
