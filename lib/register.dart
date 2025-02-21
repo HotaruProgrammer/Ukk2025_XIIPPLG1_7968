@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       _showAlert('Registrasi berhasil, silakan login', success: true);
 
-      Future.delayed(Duration(seconds: 1), () {
+      Future.delayed(Duration(seconds: 2), () {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),

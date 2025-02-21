@@ -89,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () async {
               String newValue = controller.text.trim();
               if (newValue.isNotEmpty && newValue != currentValue) {
-                Navigator.pop(context); // Tutup dialog lebih awal agar UI tidak terasa lambat
+                Navigator.pop(context); 
                 await _updateUserData(field, newValue);
               }
             },
